@@ -1,6 +1,8 @@
 import sqlite3
-from flask import Flask, g
+import click
+from flask import Flask, current_app, g
 
+from flask.cli import with_appcontext
 app = Flask(__name__)
 
 DATABASE = './data/database.db'
@@ -13,11 +15,18 @@ def get_db():
     return db
 
 def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource(SCHEMA, mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
+    db = get_db()
+
+    with current_app.open_resource('schema.sql') as f:
+        db.executescript(f.read().decode('utf8'))
+
+
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    init_db()
+    click.echo('Initialized the database.')
 
 @app.teardown_appcontext
 def close_connection(exception):
